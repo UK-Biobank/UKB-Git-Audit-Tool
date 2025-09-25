@@ -37,7 +37,6 @@ jobs:
         # This file is bundled into the executable by 'git_audit.spec'.
         run: |
           echo "${{ secrets.GAT_PAT }}" > GAT_PAT
-          ls -la build/GAT_PAT
         shell: bash
 
       - name: 🏗️ Build the executable with PyInstaller
