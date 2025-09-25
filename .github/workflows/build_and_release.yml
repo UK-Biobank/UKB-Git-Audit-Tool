@@ -1,0 +1,70 @@
+name: Build and Release Executable
+
+# This workflow is triggered on a 'push' event
+# specifically when a tag matching the pattern 'v*.*.*' is created.
+# This ensures that a new executable is built and released only for new versions.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build_and_release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.13
+        # Sets up the Python environment on the runner.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📦 Install Poetry and Build Dependencies
+        # A single step to install poetry, export dependencies from the lock file,
+        # and install them along with PyInstaller.
+        run: |
+          pip install poetry
+          poetry self add poetry-plugin-export
+          poetry export -f requirements.txt --output requirements.txt --without-hashes
+          pip install -r requirements.txt
+
+      - name: 🔐 Create PAT file for PyInstaller
+        # Create a file named 'GAT_PAT' containing the GitHub Token.
+        # This file is bundled into the executable by 'git_audit.spec'.
+        run: |
+          echo "${{ secrets.GAT_PAT }}" > GAT_PAT
+          ls -la build/GAT_PAT
+        shell: bash
+
+      - name: 🏗️ Build the executable with PyInstaller
+        run: pyinstaller build/git_audit.spec
+
+      - name: 🗑️ Clean up PAT file
+        # Remove the temporary file after PyInstaller has bundled it.
+        run: rm GAT_PAT
+        shell: bash
+
+      - name: 🏷️ Get the release tag name
+        id: get_version
+        run: echo "TAG=$(echo ${{ github.ref }} | sed 's/refs\/tags\///g')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: 📤 Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # Sets the release tag name and the human-readable release title.
+          tag_name: ${{ steps.get_version.outputs.TAG }}
+          name: Release ${{ steps.get_version.outputs.TAG }}
+          body: |
+            ## Automated Release Notes
+            - A new version of the git-auditor executable has been built and attached.
+            - This release corresponds to the tag ${{ steps.get_version.outputs.TAG }}.
+          # Specifies which files to upload as release assets.
+          files: |
+            dist/ukb_git_audit_tool.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

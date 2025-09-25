@@ -1,0 +1,7 @@
+## Ignore exe build files/folders
+/dist
+/build/git_audit
+
+# ignore compile files
+/__pycache__
+src/__pycache__
