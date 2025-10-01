@@ -19,5 +19,5 @@ def get_github_token():
     
     # If not found in the file, fall back to environment variable
     if not pat:
-        pat = os.getenv("GIT_PAT", "")
+        pat = os.getenv("GAT_PAT", "")
     return pat

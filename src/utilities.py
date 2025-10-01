@@ -236,8 +236,12 @@ def fetch_forked_repos(owner, repo, token=None):
         for f in data:
             full = f.get("full_name", "")
             html = f.get("html_url", "")
-            owner_info = f.get("owner", {})
-            email = owner_info.get("email", "N/A")  # GitHub usually hides emails
+            try:
+                email = get_github_email(
+                    full.split('/')[0],
+                    token=token).iloc[0]['Email']
+            except Exception:
+                email = ''
             created = f.get("created_at", "")[:10]  # YYYY-MM-DD
             forks.append({
                 "name": full,
