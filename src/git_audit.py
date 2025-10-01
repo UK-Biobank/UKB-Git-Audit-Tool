@@ -32,6 +32,7 @@ def capture_git_files() -> str:
         ["git", "rev-list", "--objects", "--all"],
         stdout=subprocess.PIPE,
         text=True,
+        encoding="utf-8"
     )
     
     big_file_dig = subprocess.run(
@@ -39,6 +40,7 @@ def capture_git_files() -> str:
         input=all_ref_files.stdout,
         capture_output=True,
         text=True,
+        encoding="utf-8"
     )
     return big_file_dig
 
@@ -134,7 +136,7 @@ def get_blob_hashes_for_commits(commits) -> pd.DataFrame:
         try:
             ls_tree_cmd = subprocess.run(
                 ['git', 'ls-tree', '-r', '-z', f'{commit}'],
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True, encoding="utf-8"
             )
             
             parts = ls_tree_cmd.stdout.split('\0')
@@ -307,6 +309,9 @@ def audit_repository(args):
         # 3. Format the dataframe for eases of analysis
         final_df['total_occ'] = final_df['eid_occ'] + final_df['filename_occ']                      # combine content occurrences with filename occurrences
         final_df['status'] = final_df['status'].apply(lambda s: contextualise_git_status(s))
+
+        final_df = final_df[final_df['status'] != 'deleted']                    # remove deleted files (no longer in repo)
+
         final_df['repo_name'] = repo_name
         #git_name = Path(rf"{args.git_url}").stem
         git_name = repo_name
