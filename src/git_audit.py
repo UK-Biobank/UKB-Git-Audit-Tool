@@ -365,7 +365,8 @@ def audit_repository(args):
             total_eids_df = total_eids_df.sort_values(by='count', ascending=False)
             total_eids_df.to_csv(f"eid_frequency_{repo_name}.csv", index=False)
             print(f"Written EID frequency report to eid_frequency_{repo_name}.csv")
-
+            
+            return total_eids_df        # returns the total_eids_df if written
 
         else:
             print("No findings to report.")
