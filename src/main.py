@@ -65,7 +65,8 @@ def run_from_url():
     url = input("Enter repository URL: ").strip()
     args = Namespace(git_url=url,
                         output_fpath='./REPOSITORY_AUDIT_REPORT.csv')
-    audit_repository(args)
+    df = audit_repository(args)
+    ## Mahru goes and does fancy stuff with this
 
 
 def run_from_csv():
