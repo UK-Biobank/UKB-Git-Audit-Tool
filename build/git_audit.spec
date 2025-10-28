@@ -6,7 +6,7 @@ a = Analysis(
     ['..\\src\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('..\\GAT_PAT', '.')],
+    datas=[('.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
