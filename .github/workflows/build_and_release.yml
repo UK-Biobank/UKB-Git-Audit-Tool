@@ -58,7 +58,14 @@ jobs:
           SM_CLIENT_CERT_FILE: ${{ runner.temp }}\Certificate_pkcs12.p12
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
         run: |
-          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
+          # 1. Check connectivity and authentication
+          smctl healthcheck
+
+          # 2. Sync the certificate to the Windows Certificate Store (CRITICAL STEP)
+          smctl windows certsync --keypair-alias key_1368373973
+
+          # 3. Sign the executable, creating a new signed file
+          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe --output dist/ukb_git_audit_tool_signed.exe
 
       #####################################################################################
       # --- RELEASE --- (Using GitHub Releases) ###########################################
