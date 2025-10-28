@@ -68,7 +68,7 @@ jobs:
         env:
           SM_HOST: ${{ secrets.SM_HOST }}
           SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_FILE: tmp/Certificate_pkcs12.p12
+          SM_CLIENT_CERT_FILE: /tmp/Certificate_pkcs12.p12
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
         run: |
           # 1. Check connectivity and authentication
