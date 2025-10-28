@@ -58,7 +58,7 @@ jobs:
           SM_CLIENT_CERT_FILE: ${{ runner.temp }}\Certificate_pkcs12.p12
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
         run: |
-          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe --output dist/ukb_git_audit_tool_signed.exe
+          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
 
       #####################################################################################
       # --- RELEASE --- (Using GitHub Releases) ###########################################
@@ -81,6 +81,6 @@ jobs:
             - This release corresponds to the tag ${{ steps.get_version.outputs.TAG }}.
           # Specifies which files to upload as release assets.
           files: |
-            dist/ukb_git_audit_tool_signed.exe
+            dist/ukb_git_audit_tool.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
