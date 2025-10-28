@@ -7,6 +7,9 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - test-actions
+
 
 jobs:
   build_sign_release:
@@ -47,8 +50,18 @@ jobs:
           force-download-tools: true
 
       - name: 🔐 Set up DigiCert Certificate
-        # Creates the certificate file in a temporary directory on the runner
-        run: echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > ${{ runner.temp }}/Certificate_pkcs12.p12
+        # Use $TEMP for correct pathing in bash on Windows
+        run: |
+          # 1. Decode the secret into a temporary file
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > $TEMP/Certificate_pkcs12.p12
+          
+          # 2. Calculate the MD5 checksum of the resulting file
+          echo "--- MD5 Checksum of Decoded Certificate ---"
+          md5sum $TEMP/Certificate_pkcs12.p12
+          echo "-------------------------------------------"
+          
+          # Optional: List files to confirm the file exists
+          ls -l $TEMP/Certificate_pkcs12.p12
         shell: bash
 
       - name: ✍️ Sign the Executable
