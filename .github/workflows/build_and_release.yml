@@ -64,21 +64,22 @@ jobs:
           ls -l $TEMP/Certificate_pkcs12.p12
         shell: bash
 
-      - name: ✍️ Sign the Executable
-        env:
-          SM_HOST: ${{ secrets.SM_HOST }}
-          SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_FILE: /tmp/Certificate_pkcs12.p12
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+      - name: Set Environment Variables for SMCTL 
+        run: | 
+          # Set the SM_HOST and SM_API_KEY
+          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV" 
+          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_FILE=/tmp/Certificate_pkcs12.p12" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: ✍️ Sign the Executable      
         run: |
-          # 1. Check connectivity and authentication
-          smctl healthcheck
-
-          # 2. Sync the certificate to the Windows Certificate Store (CRITICAL STEP)
-          smctl windows certsync --keypair-alias key_1368373973
-
-          # 3. Sign the executable, creating a new signed file
-          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
+           # smctl now automatically reads all variables set in the previous step
+           smctl healthcheck 
+           smctl windows certsync --keypair-alias key_1368373973
+           smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
+        shell: bash
 
       #####################################################################################
       # --- RELEASE --- (Using GitHub Releases) ###########################################
