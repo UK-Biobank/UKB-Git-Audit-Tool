@@ -52,16 +52,7 @@ jobs:
       - name: 🔐 Set up DigiCert Certificate
         # Use $TEMP for correct pathing in bash on Windows
         run: |
-          # 1. Decode the secret into a temporary file
           echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > $TEMP/Certificate_pkcs12.p12
-          
-          # 2. Calculate the MD5 checksum of the resulting file
-          echo "--- MD5 Checksum of Decoded Certificate ---"
-          md5sum $TEMP/Certificate_pkcs12.p12
-          echo "-------------------------------------------"
-          
-          # Optional: List files to confirm the file exists
-          ls -l $TEMP/Certificate_pkcs12.p12
         shell: bash
 
       - name: Set Environment Variables for SMCTL 
