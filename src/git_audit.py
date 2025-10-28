@@ -339,7 +339,7 @@ def audit_repository(args):
                 "repo_name", "repo_owner", "repo_full_name",
                 "commit", "date", "status", "filename", "file_ext", "blob_hash",
                 "size_bytes", "size_MB", "eid_occ", "filename_occ", "total_occ",
-                "unique_occ", "found_ids", "repo_link", "raw_link", "file_link",
+                "unique_occ", "repo_link", "raw_link", "file_link", "found_ids",
                 "refs", "old_filename", "Decision", "Justification"
             ]
 
