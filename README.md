@@ -61,11 +61,10 @@ Running the script or executable opens a terminal with the following options:
 
 
 ## Contributing
-
 Contributions are welcome! Please open issues or submit pull requests for bug fixes, new features, or improvements.
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Disclaimer
-This tool is intended to assist with compliance but does not guarantee complete detection of all sensitive data. Always review flagged items manually.
+See [DISCLAIMER](DISCLAIMER.md) for details.

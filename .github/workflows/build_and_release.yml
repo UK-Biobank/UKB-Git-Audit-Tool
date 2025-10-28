@@ -9,7 +9,7 @@ on:
       - 'v*.*.*'
 
 jobs:
-  build_and_release:
+  build_sign_release:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -17,6 +17,9 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
+      #####################################################################################
+      ## --- BUILD --- (Using PyInstaller) ################################################
+      #####################################################################################      
       - name: 🐍 Set up Python 3.13
         # Sets up the Python environment on the runner.
         uses: actions/setup-python@v5
@@ -37,11 +40,41 @@ jobs:
         # This file is bundled into the executable by 'git_audit.spec'.
         run: |
           echo "${{ secrets.GAT_PAT }}" > GAT_PAT
-          ls -la build/GAT_PAT
         shell: bash
 
       - name: 🏗️ Build the executable with PyInstaller
         run: pyinstaller build/git_audit.spec
+
+      #####################################################################################
+      # --- SIGN --- (Using DigiCert Software Trust Manager) ##############################
+      #####################################################################################
+      - name: 🔏 Code signing with DigiCert Software Trust Manager
+        uses: digicert/ssm-code-signing@v1.1.1
+        with:
+          force-download-tools: true
+
+      - name: Set up certificate 
+        run: | 
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/ .p12 
+        shell: bash 
+
+      - name: Set variables 
+        id: variables 
+        run: | 
+          echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT 
+          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV" 
+          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV" 
+          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV" 
+          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV" 
+        shell: bash
+      
+      - name: 🔐 Sign the executable using keypair alias
+        run: |
+          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
+
+      #####################################################################################
+      # --- RELEASE --- (Using GitHub Releases) ###########################################
+      #####################################################################################
 
       - name: 🗑️ Clean up PAT file
         # Remove the temporary file after PyInstaller has bundled it.
@@ -65,6 +98,6 @@ jobs:
             - This release corresponds to the tag ${{ steps.get_version.outputs.TAG }}.
           # Specifies which files to upload as release assets.
           files: |
-            dist/ukb_git_audit_tool.exe
+            dist/ukb_git_audit_tool_signed.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
