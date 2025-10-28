@@ -9,7 +9,7 @@ on:
       - 'v*.*.*'
 
 jobs:
-  build_and_release:
+  build_sign_release:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -17,6 +17,9 @@ jobs:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
+      #####################################################################################
+      ## --- BUILD --- (Using PyInstaller) ################################################
+      #####################################################################################      
       - name: 🐍 Set up Python 3.13
         # Sets up the Python environment on the runner.
         uses: actions/setup-python@v5
@@ -32,21 +35,34 @@ jobs:
           poetry export -f requirements.txt --output requirements.txt --without-hashes
           pip install -r requirements.txt
 
-      - name: 🔐 Create PAT file for PyInstaller
-        # Create a file named 'GAT_PAT' containing the GitHub Token.
-        # This file is bundled into the executable by 'git_audit.spec'.
-        run: |
-          echo "${{ secrets.GAT_PAT }}" > GAT_PAT
-          ls -la build/GAT_PAT
-        shell: bash
-
       - name: 🏗️ Build the executable with PyInstaller
         run: pyinstaller build/git_audit.spec
 
-      - name: 🗑️ Clean up PAT file
-        # Remove the temporary file after PyInstaller has bundled it.
-        run: rm GAT_PAT
+      #####################################################################################
+      # --- SIGN --- (Using DigiCert Software Trust Manager) ##############################
+      #####################################################################################
+      - name: 🔏 Download DigiCert Tools
+        uses: digicert/ssm-code-signing@v1.1.1
+        with:
+          force-download-tools: true
+
+      - name: 🔐 Set up DigiCert Certificate
+        # Creates the certificate file in a temporary directory on the runner
+        run: echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > ${{ runner.temp }}\Certificate_pkcs12.p12
         shell: bash
+
+      - name: ✍️ Sign the Executable
+        env:
+          SM_HOST: ${{ secrets.SM_HOST }}
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_FILE: ${{ runner.temp }}\Certificate_pkcs12.p12
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+        run: |
+          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe --output dist/ukb_git_audit_tool_signed.exe
+
+      #####################################################################################
+      # --- RELEASE --- (Using GitHub Releases) ###########################################
+      #####################################################################################
 
       - name: 🏷️ Get the release tag name
         id: get_version
@@ -65,6 +81,6 @@ jobs:
             - This release corresponds to the tag ${{ steps.get_version.outputs.TAG }}.
           # Specifies which files to upload as release assets.
           files: |
-            dist/ukb_git_audit_tool.exe
+            dist/ukb_git_audit_tool_signed.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

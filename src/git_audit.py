@@ -16,10 +16,8 @@ from datetime import datetime, timezone
 from utilities import (regex_pattern, register_common_ukb_filetypes, 
                       contextualise_git_status, update_dictionary,
                       build_collaborator_table, fetch_forked_repos)
-from access_management import get_github_token
 
 register_common_ukb_filetypes()
-gh_token = get_github_token()
 
 
 # --- Core Data Collection and Parsing Functions ---
@@ -347,14 +345,6 @@ def audit_repository(args):
 
             final_df = final_df[ordered_cols]
             final_df.sort_values(by='total_occ', ascending=False, inplace=True)
-
-            ## Build collaborator emails table
-            build_collaborator_table(owner, repo_name,
-                                     token=gh_token)
-
-            ## Build json file of forked repos
-            fetch_forked_repos(owner, repo_name,
-                                     token=gh_token)
 
             # --- repo-level EID frequency table ---
             output_csv_path = args.output_fpath.replace('.csv', f'_{git_name}.csv')
