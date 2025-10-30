@@ -1,10 +1,13 @@
 # UKB-Git-Audit-Tool
-Tool for auditing Git repos for potential data breaches concerning UK Biobank data. Scans commit history and flags files with sensitive content. Easy to use—just drop the executable into your repo and run.
+The UKB-Git-Audit-Tool is a utility designed to audit Git repositories for potential exposure of UK Biobank data. It performs a comprehensive scan of the repository’s commit history—including deleted files—to identify and flag content that may contain sensitive information.
+
+The tool supports both executable and Python script modes, making it suitable for a range of environments and workflows.
+
 
 ## Features
 
-- **Automated Scanning:** Scans your Git repository for files containing sensitive UK Biobank data.
-- **Comprehensive Audit:** Checks entire commit history, inlcuding deleted files.
+- **Automated Scanning:** Scans your Git repository for files containing UK Biobank data.
+- **Comprehensive Audit:** Checks full commit history, including deleted files.
 - **Customizable Rules:** Easily extend or modify patterns for sensitive data detection.
 - **Clear Reporting:** Generates detailed reports highlighting potential data breaches.
 - **Cross-Platform:** Works on Windows as an executable, or can be run as a Python script.
@@ -15,6 +18,8 @@ Tool for auditing Git repos for potential data breaches concerning UK Biobank da
 1. **Download** the latest release from the [releases page](https://github.com/UK-Biobank/UKB-Git-Audit-Tool/releases).
 2. **Place** the executable in the root directory of your Git repository.
 3. **Run** the ukb-git-audit-tool.exe tool
+4. **Enter** option 1 (Run in the current directory)
+
 
 ## Alternative Installation and Usage (Python-based)
 
@@ -56,8 +61,6 @@ Running the script or executable opens a terminal with the following options:
 | --- | --- | --- |
 | Audit report          | CSV   | Lists all files in the repository with audit and file metrics     |
 | EID frequency table   | CSV   | Tracks potential EIDs and their frequency.                        |
-| Forks                 | JSON  | Lists forks of the repository.                                    |
-| Contributors table    | CSV   | Lists owner and contributors and their public email addresses.    |
 
 
 ## Contributing
