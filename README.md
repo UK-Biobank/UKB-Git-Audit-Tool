@@ -8,7 +8,6 @@ The tool supports both executable and Python script modes, making it suitable fo
 
 - **Automated Scanning:** Scans your Git repository for files containing UK Biobank data.
 - **Comprehensive Audit:** Checks full commit history, including deleted files.
-- **Customizable Rules:** Easily extend or modify patterns for sensitive data detection.
 - **Clear Reporting:** Generates detailed reports highlighting potential data breaches.
 - **Cross-Platform:** Works on Windows as an executable, or can be run as a Python script.
 
