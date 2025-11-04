@@ -7,6 +7,9 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - test-actions
+
 
 jobs:
   build_sign_release:
@@ -47,18 +50,27 @@ jobs:
           force-download-tools: true
 
       - name: 🔐 Set up DigiCert Certificate
-        # Creates the certificate file in a temporary directory on the runner
-        run: echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > ${{ runner.temp }}\Certificate_pkcs12.p12
+        # Use $TEMP for correct pathing in bash on Windows
+        run: |
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > $TEMP/Certificate_pkcs12.p12
         shell: bash
 
-      - name: ✍️ Sign the Executable
-        env:
-          SM_HOST: ${{ secrets.SM_HOST }}
-          SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_FILE: ${{ runner.temp }}\Certificate_pkcs12.p12
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+      - name: Set Environment Variables for SMCTL 
+        run: | 
+          # Set the SM_HOST and SM_API_KEY
+          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV" 
+          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_FILE=/tmp/Certificate_pkcs12.p12" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: ✍️ Sign the Executable      
         run: |
-          smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe --output dist/ukb_git_audit_tool_signed.exe
+           # smctl now automatically reads all variables set in the previous step
+           smctl healthcheck 
+           smctl windows certsync --keypair-alias key_1368373973
+           smctl sign --keypair-alias key_1368373973 --input dist/ukb_git_audit_tool.exe
+        shell: bash
 
       #####################################################################################
       # --- RELEASE --- (Using GitHub Releases) ###########################################
@@ -84,6 +96,6 @@ jobs:
 
           # Specifies which files to upload as release assets.
           files: |
-            dist/ukb_git_audit_tool_signed.exe
+            dist/ukb_git_audit_tool.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
