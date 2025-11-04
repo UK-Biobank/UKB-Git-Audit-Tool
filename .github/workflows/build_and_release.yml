@@ -79,6 +79,9 @@ jobs:
             ## Automated Release Notes
             - A new version of the git-auditor executable has been built and attached.
             - This release corresponds to the tag ${{ steps.get_version.outputs.TAG }}.
+
+            If you do try out our new UKB-Git-Audit-Tool, we would love to hear from you. [Complete this form](https://forms.cloud.microsoft/e/m0uszU00Yh) to share your feedback.
+
           # Specifies which files to upload as release assets.
           files: |
             dist/ukb_git_audit_tool_signed.exe
