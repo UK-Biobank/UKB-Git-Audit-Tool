@@ -64,12 +64,40 @@ Running the script or executable opens a terminal with the following options:
 - ✅ **Batch Processing Improvements:** Better validation and progress tracking for CSV batch audits
 - ✅ **Comprehensive Testing:** Added 78+ automated tests to ensure reliability
 
-### Output Files
-| File Name     | Format    | Description |
-| --- | --- | --- |
-| Audit report          | CSV   | Lists all files in the repository with audit and file metrics     |
-| EID frequency table   | CSV   | Tracks potential EIDs and their frequency.                        |
+### Output Directory
 
+All audit reports are saved to the `ukb_audit_reports/` folder in your current working directory:
+
+```
+your-repo/
+├── ukb_audit_reports/
+│   ├── REPOSITORY_AUDIT_REPORT_your-repo.csv
+│   ├── eid_frequency_your-repo.csv
+│   └── AUDIT_SUMMARY_your-repo.html
+├── .gitignore  (should include ukb_audit_reports/)
+└── ...
+```
+
+**IMPORTANT**: The tool will prompt you to add `ukb_audit_reports/` to your `.gitignore` file to prevent accidentally committing sensitive audit data.
+
+### Output Files
+
+| File Name     | Format | Description |
+| ------------- | ------ | ----------- |
+| REPOSITORY_AUDIT_REPORT_{repo}.csv | CSV  | Detailed list of all files in the repository with audit metrics, match counts, and GitHub links |
+| eid_frequency_{repo}.csv | CSV | Frequency table of all detected potential EIDs, sorted by occurrence count |
+| AUDIT_SUMMARY_{repo}.html | HTML | Visual summary report with disclaimers, statistics, and prioritized file lists |
+
+### HTML Summary Report
+
+The HTML summary report provides:
+- **Visual overview** of findings with clear disclaimers about false positives
+- **False positive guidance**: Explanation of genomic coordinates (chr1:5234567) vs real participant IDs
+- **High-priority files**: Non-genomic files requiring manual review, with direct GitHub links
+- **File type breakdown**: Statistics by file extension to identify genomic data vs phenotype data
+- **Top frequent "EIDs"**: Most common matches with warnings for likely coordinates (>1000 occurrences)
+
+The report automatically opens in your default browser after each audit completes.
 
 ## Development & Testing
 

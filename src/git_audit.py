@@ -11,11 +11,12 @@ from collections import Counter
 from pathlib import Path
 import shutil
 from datetime import datetime, timezone
+import webbrowser
 
 
-from utilities import (regex_pattern, register_common_ukb_filetypes, 
-                      contextualise_git_status, update_dictionary,
-                      build_collaborator_table, fetch_forked_repos)
+from utilities import (regex_pattern, register_common_ukb_filetypes,
+                      contextualise_git_status, update_dictionary)
+from html_report_generator import generate_html_report
 
 register_common_ukb_filetypes()
 
@@ -284,6 +285,70 @@ def clone_or_update_repo(git_url, local_path):
                 )
 
 
+# --- HTML Report and .gitignore Checking ---
+def check_gitignore_protection(repo_path: str, output_dir: str) -> tuple[bool, bool, str]:
+    """
+    Checks if .gitignore exists and if it protects the output directory.
+
+    Args:
+        repo_path: Path to git repository root
+        output_dir: Name of output directory (e.g., 'ukb_audit_reports')
+
+    Returns:
+        tuple[bool, bool, str]:
+            - gitignore_exists: True if .gitignore file exists
+            - directory_protected: True if output_dir is in .gitignore
+            - message: Guidance message for user
+    """
+    gitignore_path = Path(repo_path) / ".gitignore"
+
+    if not gitignore_path.exists():
+        return False, False, (
+            "\n" + ("="*60) + "\n" +
+            "[WARNING] No .gitignore file found!\n" +
+            ("="*60) + "\n" +
+            "Your repository does not have a .gitignore file.\n" +
+            "Audit reports may contain sensitive participant data.\n\n" +
+            "STRONGLY RECOMMENDED:\n" +
+            "  1. Create a .gitignore file in your repository root\n" +
+            "  2. Add this line: ukb_audit_reports/\n" +
+            "  3. Run: git status\n" +
+            "  4. Verify ukb_audit_reports/ is not listed\n\n" +
+            "This prevents accidentally committing sensitive data.\n" +
+            ("="*60) + "\n"
+        )
+
+    # .gitignore exists, check if directory is protected
+    with open(gitignore_path, 'r', encoding='utf-8') as f:
+        gitignore_content = f.read()
+
+    # Check for various patterns
+    patterns = [
+        f"/{output_dir}/",
+        f"{output_dir}/",
+        f"/{output_dir}",
+        f"{output_dir}",
+    ]
+
+    is_protected = any(pattern in gitignore_content for pattern in patterns)
+
+    if is_protected:
+        return True, True, (
+            "\n[OK] Output directory is protected by .gitignore\n"
+        )
+    else:
+        return True, False, (
+            "\n" + ("="*60) + "\n" +
+            "[RECOMMENDATION] Protect audit reports\n" +
+            ("="*60) + "\n" +
+            "Add this line to your .gitignore file:\n\n" +
+            "    ukb_audit_reports/\n\n" +
+            "This prevents accidentally committing sensitive audit data.\n" +
+            "Run 'git status' after adding to verify it works.\n" +
+            ("="*60) + "\n"
+        )
+
+
 # --- Main Audit Function ---
 def audit_repository(args, working_directory=None):
     """
@@ -346,8 +411,9 @@ def audit_repository(args, working_directory=None):
         # after building full_log_df
         if not isinstance(full_log_df, pd.DataFrame) or 'commit' not in full_log_df.columns or full_log_df.empty:
             # Emit placeholder CSV when repo has no commits
-            #out = Path("/app") / f"REPOSITORY_AUDIT_REPORT_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
-            out = Path("/app") / f"REPOSITORY_AUDIT_REPORT_{repo_name}.csv"
+            output_dir = Path("ukb_audit_reports")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            out = output_dir / f"REPOSITORY_AUDIT_REPORT_{repo_name}.csv"
             pd.DataFrame([{"note": "No commits or data to audit"}]).to_csv(out, index=False)
             print("No commits found; wrote placeholder CSV.")
             return
@@ -425,20 +491,67 @@ def audit_repository(args, working_directory=None):
             final_df = final_df[ordered_cols]
             final_df.sort_values(by='total_occ', ascending=False, inplace=True)
 
-            # --- repo-level EID frequency table ---
-            output_csv_path = args.output_fpath.replace('.csv', f'_{git_name}.csv')
+            # Create output directory
+            output_dir = Path("ukb_audit_reports")
+            output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Write the per-repo audit CSV last
+            # Define output file paths
+            output_csv_path = output_dir / f"REPOSITORY_AUDIT_REPORT_{repo_name}.csv"
+            eid_freq_path = output_dir / f"eid_frequency_{repo_name}.csv"
+            html_report_path = output_dir / f"AUDIT_SUMMARY_{repo_name}.html"
+
+            # Write CSV reports
             final_df.to_csv(output_csv_path, na_rep="nan", index=False)
 
             total_eids_df = total_eids_df.sort_values(by='count', ascending=False)
-            total_eids_df.to_csv(f"eid_frequency_{repo_name}.csv", index=False)
-            print(f"Written EID frequency report to eid_frequency_{repo_name}.csv")
+            total_eids_df.to_csv(eid_freq_path, index=False)
 
+            # Generate HTML report
+            print("\nGenerating HTML summary report...")
+            html_content = generate_html_report(final_df, total_eids_df, repo_name, owner, args.git_url)
+
+            with open(html_report_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+            # Print summary of all outputs
+            print(f"\n{'='*60}")
+            print("REPORTS GENERATED")
+            print('='*60)
+            print(f"CSV Report:     {output_csv_path}")
+            print(f"EID Frequency:  {eid_freq_path}")
+            print(f"HTML Summary:   {html_report_path}")
+            print('='*60)
+
+            # Check .gitignore protection
+            gitignore_exists, is_protected, message = check_gitignore_protection(
+                repo_path, "ukb_audit_reports"
+            )
+            print(message)
+
+            # Auto-open HTML in browser
+            print("Opening HTML summary in browser...")
+            try:
+                abs_path = html_report_path.resolve()
+                webbrowser.open(abs_path.as_uri())
+                print("[OK] Report opened in default browser\n")
+            except Exception as e:
+                print(f"[NOTE] Could not auto-open browser: {e}")
+                print(f"Please open manually: {html_report_path.resolve()}\n")
 
         else:
+            # No findings - still create output directory and write placeholder
+            output_dir = Path("ukb_audit_reports")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_csv_path = output_dir / f"REPOSITORY_AUDIT_REPORT_{repo_name}.csv"
+
             print("No findings to report.")
-            pd.DataFrame([{"Message": "No findings to report."}]).to_csv(args.output_fpath.replace('.csv', f'_{git_name}.csv'), index=False)
+            pd.DataFrame([{"Message": "No findings to report."}]).to_csv(output_csv_path, index=False)
+
+            print(f"\n{'='*60}")
+            print("REPORTS GENERATED")
+            print('='*60)
+            print(f"CSV Report: {output_csv_path}")
+            print('='*60)
 
     except subprocess.CalledProcessError as e:
         print(f"\n[ERROR] A Git command failed during audit.")

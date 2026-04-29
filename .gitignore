@@ -6,3 +6,6 @@
 /__pycache__
 src/__pycache__
 tests/__pycache__
+
+# ignore audit output reports (may contain sensitive data)
+ukb_audit_reports/
