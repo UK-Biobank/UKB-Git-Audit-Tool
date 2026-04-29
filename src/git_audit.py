@@ -225,34 +225,113 @@ def analyse_file_names(df, pattern) -> pd.DataFrame:
 
 # --- Update Repo ---
 def clone_or_update_repo(git_url, local_path):
+    """
+    Clone or update a git repository with proper error handling.
+
+    Args:
+        git_url: URL of git repository
+        local_path: Local path to clone/update repository
+
+    Raises:
+        RuntimeError: If git operations fail with detailed error messages
+    """
     if os.path.isdir(os.path.join(local_path, ".git")):
         print(f"Repository already exists. Updating {local_path}...")
-        subprocess.run(["git", "fetch", "--all", "--prune"], cwd=local_path, check=True)
-        subprocess.run(["git", "pull"], cwd=local_path, check=True)
+        try:
+            subprocess.run(["git", "fetch", "--all", "--prune"], cwd=local_path, check=True, capture_output=True, text=True)
+            subprocess.run(["git", "pull"], cwd=local_path, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            error_output = e.stderr if hasattr(e, 'stderr') and e.stderr else str(e)
+            raise RuntimeError(
+                f"Failed to update repository at {local_path}\n"
+                f"Error: {error_output}\n"
+                "This may be due to:\n"
+                "  - Authentication issues (private repository)\n"
+                "  - Network connectivity problems\n"
+                "  - Repository access has been revoked\n"
+                "Please check your credentials and repository access."
+            )
     else:
         if os.path.exists(local_path):
             shutil.rmtree(local_path, ignore_errors=True)
         print(f"Cloning {git_url} to {local_path}...")
-        subprocess.run(["git", "clone", git_url, local_path], check=True)
+        try:
+            subprocess.run(["git", "clone", git_url, local_path], check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            error_output = e.stderr if hasattr(e, 'stderr') and e.stderr else str(e)
+
+            # Detect specific error types
+            if 'Authentication failed' in error_output or 'fatal: could not read' in error_output:
+                raise RuntimeError(
+                    f"Authentication failed for {git_url}\n"
+                    "This is likely a private repository.\n\n"
+                    "For private repositories:\n"
+                    "  1. Clone the repository manually with your credentials\n"
+                    "  2. Use Option 1 (Run in current directory) from within the cloned repo\n"
+                )
+            elif 'Repository not found' in error_output or '404' in error_output:
+                raise RuntimeError(
+                    f"Repository not found: {git_url}\n"
+                    "Please verify:\n"
+                    "  - The URL is correct\n"
+                    "  - The repository exists\n"
+                    "  - You have access to the repository\n"
+                )
+            else:
+                raise RuntimeError(
+                    f"Failed to clone {git_url}\n"
+                    f"Error: {error_output}\n"
+                )
 
 
 # --- Main Audit Function ---
-def audit_repository(args):
+def audit_repository(args, working_directory=None):
     """
     Main executable function for the repository audit.
     Produces a single dataframe of all files, current & historical
         with file sizes and number of potential ID occurences in the file contents and file name
-    """
-    original_path = os.getcwd()
-    
-    repo_name = args.git_url.split('/')[-1].replace('.git', '')
-    repo_path = os.path.join(original_path, repo_name)
 
-    
+    Args:
+        args: Namespace containing git_url and output_fpath
+        working_directory: Optional. If provided, audit from this directory without cloning.
+                          Use this when already inside a git repository.
+    """
+    # Defensive validation - should never hit this if main.py does its job
+    if args.git_url is None:
+        raise ValueError(
+            "git_url cannot be None. This indicates a validation error.\n"
+            "Please ensure you're running from a valid Git repository with a configured remote."
+        )
+
+    if not isinstance(args.git_url, str) or not args.git_url.strip():
+        raise ValueError(
+            f"git_url must be a non-empty string, got: {args.git_url}\n"
+            "Please provide a valid repository URL."
+        )
+
+    # Validate URL format before attempting to split
+    if '/' not in args.git_url:
+        raise ValueError(
+            f"Invalid git_url format: {args.git_url}\n"
+            "Expected format: https://github.com/owner/repository"
+        )
+
+    original_path = os.getcwd()
+
+    # Now safe to split
+    repo_name = args.git_url.split('/')[-1].replace('.git', '')
+
     try:
-        clone_or_update_repo(args.git_url, repo_path)
-        os.chdir(repo_path)
-        print(f"Auditing repository at {repo_path}...")
+        # If working_directory is provided, we're already in the repo
+        if working_directory:
+            repo_path = working_directory
+            print(f"Auditing repository at {repo_path}...")
+        else:
+            # Clone/update the repository
+            repo_path = os.path.join(original_path, repo_name)
+            clone_or_update_repo(args.git_url, repo_path)
+            os.chdir(repo_path)
+            print(f"Auditing repository at {repo_path}...")
         
         # Step 1: collect git history and size
         print("Fetching commit history...")
@@ -362,10 +441,28 @@ def audit_repository(args):
             pd.DataFrame([{"Message": "No findings to report."}]).to_csv(args.output_fpath.replace('.csv', f'_{git_name}.csv'), index=False)
 
     except subprocess.CalledProcessError as e:
-        print(f"A Git command failed. Please check the repository URL and your Git installation. Error: {e}")
+        print(f"\n[ERROR] A Git command failed during audit.")
+        print(f"Error: {e}")
+        print("\nThis could be due to:")
+        print("  - Git is not properly installed")
+        print("  - The repository is corrupted")
+        print("  - Network issues during fetch/pull")
+        print("\nPlease check:")
+        print("  1. Git is installed: git --version")
+        print("  2. The repository URL is correct")
+        print("  3. You have proper access to the repository")
+    except RuntimeError as e:
+        # Catch our custom errors from clone_or_update_repo
+        print(f"\n[ERROR] {e}")
+    except ValueError as e:
+        # Catch validation errors
+        print(f"\n[ERROR] {e}")
+    except Exception as e:
+        print(f"\n[ERROR] Unexpected error during audit: {e}")
+        print("Please report this issue if it persists.")
     finally:
         os.chdir(original_path)
-        print("Audit complete.")
+        print("\nAudit complete.")
 
 
 if __name__ == "__main__":

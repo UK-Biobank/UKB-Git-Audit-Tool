@@ -10,6 +10,7 @@ The tool supports both executable and Python script modes, making it suitable fo
 - **Comprehensive Audit:** Checks full commit history, including deleted files.
 - **Clear Reporting:** Generates detailed reports highlighting potential data breaches.
 - **Cross-Platform:** Works on Windows as an executable, or can be run as a Python script.
+- **Fully Tested:** Comprehensive test suite with 78+ tests ensuring reliability.
 
 ## Getting Started (with the .exe for Windows)
 
@@ -26,7 +27,7 @@ If you are unable to run the executable file, you can use the Python source code
 
 ### Prerequisites
 - Python version >=3.10 and <3.15
-- Git must be installed
+- Git must be installed (the tool will check and notify you if it's not)
 - Poetry or pip for dependency management
 
 ### Installation with pip
@@ -50,10 +51,18 @@ Running the script or executable opens a terminal with the following options:
 5. Exit the program.
 
 ### Notes on Private Repositories
-- Option 1 is recommended for auditing private repositories, as it uses the Git credentials already configured in your local environment.
-- Options 2 and 3 attempt to clone the repository using the provided URL. For private repositories, this requires explicit authentication and may fail if credentials are not properly configured.
-- If you wish to audit a private repository from another directory, ensure your Git credentials are accessible and provide the repository URL when prompted.
+- **Options 1 & 2 are recommended** for auditing private repositories, as it uses the Git credentials already configured in your local environment.
+- Option 3 will attempt to clone the repository using the provided URL.
+- If authentication fails, you'll receive clear error messages explaining how to resolve the issue.
 - The tool will clone the repository and perform the audit, but may duplicate the repository inside your current directory (a known issue to be resolved in future versions).
+
+### What's New in v1.2
+- ✅ **Fixed Critical Bug:** Resolved `AttributeError: 'NoneType' object has no attribute 'split'` when running in repositories without a remote URL
+- ✅ **Environment Validation:** Tool now checks Git installation and repository status before starting
+- ✅ **Better Error Messages:** Clear, actionable guidance for all error scenarios
+- ✅ **Private Repo Detection:** Automatically detects and provides guidance for private repositories
+- ✅ **Batch Processing Improvements:** Better validation and progress tracking for CSV batch audits
+- ✅ **Comprehensive Testing:** Added 78+ automated tests to ensure reliability
 
 ### Output Files
 | File Name     | Format    | Description |
@@ -62,8 +71,46 @@ Running the script or executable opens a terminal with the following options:
 | EID frequency table   | CSV   | Tracks potential EIDs and their frequency.                        |
 
 
+## Development & Testing
+
+### Running Tests
+The project includes a comprehensive test suite with 78+ tests covering all functionality.
+
+```bash
+# Install all dependencies including dev/test dependencies
+poetry install
+
+# Run all tests
+poetry run pytest
+
+# Run with verbose output
+poetry run pytest -v
+```
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Project Structure
+```
+UKB-Git-Audit-Tool/
+├── src/
+│   ├── main.py                    # Main entry point with 4 execution modes
+│   ├── git_audit.py               # Core audit logic
+│   ├── utilities.py               # Helper functions
+│   └── environment_validator.py   # Validation & environment checks (NEW)
+├── tests/
+│   ├── test_environment_validator.py  # Validation tests (36 tests)
+│   ├── test_main.py                   # Main execution tests (15 tests)
+│   └── test_git_audit.py              # Audit logic tests (27 tests)
+└── requirements.txt               # Production dependencies
+```
+
 ## Contributing
 Contributions are welcome! Please open issues or submit pull requests for bug fixes, new features, or improvements.
+
+**Before submitting:**
+1. Ensure all tests pass: `poetry run pytest`
+2. Add tests for new features
+3. Update documentation as needed
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
